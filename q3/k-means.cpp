@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
@@ -27,7 +28,7 @@ float prev_dist_sum;
 float curr_dist_sum;
 
 // Vector initialisation
-void init_vectors(void){
+void init_vectors(void){  // TODO: parallel?
 
     srand(time(0));  // use current time as seed for random generator
     int upper_bound = 510001;
@@ -49,7 +50,7 @@ void init_vectors(void){
 }
 
 // Pick initial centres
-void init_centers(void){
+void init_centers(void){  // TODO: parallel?
 
     int indices[Nc];
     int i = 0;
@@ -71,6 +72,7 @@ void init_centers(void){
     }
 
     // populate Center array
+    #pragma omp parallel for private(i)
     for (i=0; i<Nc; i++){
         // copy corresponding vector from Vec array
         memcpy(Center[i], Vec[indices[i]], sizeof(float) * Nv);
@@ -85,6 +87,7 @@ void assign_clusters(void){
     float max_dist = Nv * 510.0 * 510.0;
     curr_dist_sum = 0.0f;
 
+    #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<N; i++){  // foreach vector
         float min_dist = max_dist;
         int center_idx;
@@ -103,6 +106,7 @@ void assign_clusters(void){
             }
         }
         min_dist = sqrt(min_dist);  // saves time and enables use of atomic below
+        #pragma omp atomic
         curr_dist_sum += min_dist;
         Classes[i] = center_idx;  // assign centre to vector
     }
@@ -114,15 +118,19 @@ void update_centers(void){
 
     memset(Observations, 0, Nc * sizeof(int));  // number of vectors in each cluster
     memset(Center, 0, Nc * Nv * sizeof(float));  // set all centres to origin
+    #pragma omp parallel for
     for (int i=0; i<N; i++){  // foreach vector
         for (int j=0; j<Nv; j++){  // foreach dimension
             // add coordinate to corresponding dimension of cluster centre
+            #pragma omp atomic
             Center[Classes[i]][j] += Vec[i][j];
         }
+        #pragma omp atomic
         Observations[Classes[i]] += 1;
     }
 
     float inverse_obs;
+    #pragma omp parallel for private(inverse_obs)
     for (int i=0; i<Nc; i++){  // foreach centre
         // divide by number of observations in cluster to calculate the mean
         inverse_obs = 1.0f / (float)Observations[i];
