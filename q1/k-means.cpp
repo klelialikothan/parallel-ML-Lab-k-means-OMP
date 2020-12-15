@@ -71,9 +71,9 @@ void init_centers(void){
     }
 
     // populate Center array
-    for (i=0; i<Nc; i++){
+    for (int j=0; j<Nc; j++){
         // copy corresponding vector from Vec array
-        memcpy(Center[i], Vec[indices[i]], sizeof(float) * Nv);
+        memcpy(Center[j], Vec[indices[j]], sizeof(float) * Nv);
     }
 
 }
@@ -88,14 +88,11 @@ void assign_clusters(void){
     for (int i=0; i<N; i++){  // foreach vector
         float min_dist = max_dist;
         int center_idx;
-        // #pragma omp parallel for shared(min_dist, diff, temp_dist)
         for (int j=0; j<Nc; j++){  // foreach centre
-            float diff;
             float temp_dist = 0.0f;
             // calculate euclidean distance
             for (int k=0; k<Nv; k++){
-                diff = Center[j][k] - Vec[i][k];
-                temp_dist += diff * diff;  // pow is slower
+                temp_dist += (Center[j][k] - Vec[i][k]) * (Center[j][k] - Vec[i][k]);  // pow is slower
             }
             if (temp_dist < min_dist){  // better fit found
                 min_dist = temp_dist;
@@ -122,10 +119,9 @@ void update_centers(void){
         Observations[Classes[i]] += 1;
     }
 
-    float inverse_obs;
     for (int i=0; i<Nc; i++){  // foreach centre
         // divide by number of observations in cluster to calculate the mean
-        inverse_obs = 1.0f / (float)Observations[i];
+        float inverse_obs = 1.0f / (float)Observations[i];
         for (int j=0; j<Nv; j++){  // foreach dimension
             Center[i][j] *= inverse_obs;
         }
@@ -147,7 +143,6 @@ int main (){
     int count = 1;
     float term = curr_dist_sum;
     while(term > THR_KMEANS){
-        cout<<"term: "<<term<<" ";
         prev_dist_sum = curr_dist_sum;
         assign_clusters();
         update_centers();

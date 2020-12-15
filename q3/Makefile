@@ -1,10 +1,10 @@
 name = Parallel_ML_lab_2_3
-src = $(wildcard *.c)
+src = $(wildcard *.cpp)
 obj = $(src:/c=.o)
 
 CC = g++
-CFLAGS = -std=c++17 -O2
-LIBFLAGS = -lm -fopenmp
+CFLAGS = -std=c++17 -O2 -march=native -mtune=native
+LIBFLAGS = -lm -fopenmp -fopt-info
 
 compile: $(name)
 $(name): $(obj)
